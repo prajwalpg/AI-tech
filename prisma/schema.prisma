@@ -1,0 +1,169 @@
+generator client {
+    provider = "prisma-client-js"
+    binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+    provider = "sqlite"
+    url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String
+  role          String    @default("Student")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  lessons             Lesson[]
+  accounts            Account[]
+  sessions            Session[]
+  contentGenerations  ContentGeneration[]
+  knowledgeBases      KnowledgeBase[]      @relation("TeacherKnowledge")
+  doubts              Doubt[]              @relation("StudentDoubts")
+  timetables          Timetable[]
+  notifications       Notification[]
+  progresses          Progress[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model ContentGeneration {
+  id              String   @id @default(cuid())
+  teacherId       String
+  teacher         User     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  title           String
+  subject         String
+  topic           String
+  type            String   // notes, worksheet, key_concepts, question_paper
+  generatedText   String
+  status          String   @default("Pending") // Pending, Approved, Rejected
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  knowledgeBaseId String?
+  knowledgeBase   KnowledgeBase? @relation(fields: [knowledgeBaseId], references: [id])
+
+  @@index([teacherId])
+}
+
+model KnowledgeBase {
+  id              String   @id @default(cuid())
+  teacherId       String
+  teacher         User     @relation("TeacherKnowledge", fields: [teacherId], references: [id], onDelete: Cascade)
+  title           String
+  subject         String
+  topic           String
+  content         String   // Final approved content
+  type            String   // notes, worksheet, questions
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  sourceContents  ContentGeneration[]
+
+  @@index([teacherId])
+  @@index([subject])
+}
+
+model Doubt {
+  id              String   @id @default(cuid())
+  studentId       String
+  student         User     @relation("StudentDoubts", fields: [studentId], references: [id], onDelete: Cascade)
+  question        String
+  answer          String
+  wasAnsweredByAI Boolean  // True if answered from knowledge base, False if referred to teacher
+  createdAt       DateTime @default(now())
+
+  @@index([studentId])
+}
+
+model Timetable {
+  id              String   @id @default(cuid())
+  teacherId       String
+  teacher         User     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  subject         String
+  scheduleData    String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([teacherId])
+}
+
+model Lesson {
+  id          String   @id @default(cuid())
+  title       String
+  subject     String
+  description String?
+  content     String
+  teacherId   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  teacher     User     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@index([teacherId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String   @default("info")
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Progress {
+  id        String   @id @default(cuid())
+  studentId String
+  student   User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lessonId  String?
+  subject   String
+  status    String   @default("Not Started") // Not Started, In Progress, Completed
+  score     Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId])
+}
