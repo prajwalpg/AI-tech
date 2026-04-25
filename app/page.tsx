@@ -1,7 +1,21 @@
-import { BookOpen, GraduationCap, Users, Sparkles } from 'lucide-react'
+import { BookOpen, GraduationCap, Sparkles } from 'lucide-react'
 import Link from 'next/link'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth-options'
+import { redirect } from 'next/navigation'
 
-export default function HomePage() {
+export default async function HomePage() {
+  const session = await getServerSession(authOptions)
+
+  if (session?.user) {
+    const role = (session.user as any).role
+    if (role === 'Teacher') {
+      redirect('/teacher/dashboard')
+    } else {
+      redirect('/student/dashboard')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
       {/* Navigation */}
@@ -16,16 +30,10 @@ export default function HomePage() {
             </div>
             <div className="flex items-center space-x-4">
               <Link
-                href="/student/dashboard"
-                className="text-gray-700 hover:text-blue-600 transition-colors font-medium"
-              >
-                Continue as Student
-              </Link>
-              <Link
-                href="/teacher/dashboard"
+                href="/login"
                 className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg font-medium"
               >
-                Continue as Teacher
+                Sign In
               </Link>
             </div>
           </div>
@@ -46,20 +54,12 @@ export default function HomePage() {
             Sahayak is an AI platform where teachers control the knowledge base. 
             Students learn and solve doubts based ONLY on syllabus-aligned, teacher-approved content.
           </p>
-          <div className="flex justify-center space-x-4 pt-8">
+          <div className="flex justify-center pt-8">
             <Link
-              href="/teacher/dashboard"
+              href="/login"
               className="bg-blue-600 text-white px-8 py-4 rounded-xl hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl text-lg font-semibold flex items-center space-x-2"
             >
-              <Users className="w-5 h-5" />
-              <span>Continue as Teacher</span>
-            </Link>
-            <Link
-              href="/student/dashboard"
-              className="bg-white text-blue-600 px-8 py-4 rounded-xl hover:bg-blue-50 transition-all shadow-lg hover:shadow-xl text-lg font-semibold border-2 border-blue-600 flex items-center space-x-2"
-            >
-              <GraduationCap className="w-5 h-5" />
-              <span>Continue as Student</span>
+              <span>Get Started — Sign In or Create Account</span>
             </Link>
           </div>
         </div>

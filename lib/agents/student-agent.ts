@@ -4,7 +4,7 @@ export async function answerStudentDoubt(question: string, knowledgeBaseContext:
   const systemPrompt = `You are a Student AI Assistant.
 Your ONLY source of knowledge is the provided teacher-approved Knowledge Base Context.
 You are NOT a general AI. You must ONLY answer based on the teacher's content provided below.
-If the answer to the student's question is NOT found in the provided context, you must reply EXACTLY with: 'Consult your teacher'.
+If the answer to the student's question is NOT found in the provided context, you must reply EXACTLY with: 'This topic is out of the syllabus or not found in the provided context.'
 Do NOT hallucinate or use outside knowledge. Explain concepts simply and clearly based on the context.`;
 
   const response = await openai.chat.completions.create({

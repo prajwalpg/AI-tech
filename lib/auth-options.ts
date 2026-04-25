@@ -25,17 +25,7 @@ export const authOptions: NextAuthOptions = {
         })
 
         if (!user) {
-          // Auto-register user if they don't exist
-          const hashedPassword = await bcrypt.hash(credentials.password, 10)
-          const role = credentials.email.includes('teacher') ? 'Teacher' : 'Student'
-          user = await prisma.user.create({
-            data: {
-              email: credentials.email,
-              password: hashedPassword,
-              name: credentials.email.split('@')[0],
-              role: role
-            }
-          })
+          throw new Error('No account found with this email. Please sign up first.')
         } else if (!user.password) {
           throw new Error('Invalid credentials')
         } else {
@@ -80,5 +70,5 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: 'jwt'
   },
-  secret: process.env.NEXTAUTH_SECRET
+  secret: process.env.NEXTAUTH_SECRET || 'sahayak-development-secret-key-1234'
 }

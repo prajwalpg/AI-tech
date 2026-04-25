@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-options';
 import { prisma } from '@/lib/prisma';
+import { requireTeacher } from '@/lib/auth-guards';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const userId = (session?.user as any)?.id || 'demo-teacher-id';
+    const user = await requireTeacher(request).catch((err) => {
+      console.error("requireTeacher Error:", err);
+      return null;
+    });
+    if (!user) return NextResponse.json({ error: 'Session Expired! Please Sign Out AND Sign Back In to renew your credentials.' }, { status: 401 });
+    const userId = user.id;
     
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get('status') || 'Pending';
@@ -30,15 +33,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await requireTeacher(request).catch((err) => {
+      console.error("requireTeacher Error in POST:", err);
+      return null;
+    });
+    if (!user) return NextResponse.json({ error: 'Session Expired! Please click Back to Dashboard, Sign Out, and Sign In again.' }, { status: 401 });
+    const teacherId = user.id;
+
     const body = await request.json();
     const { title, subject, topic, generatedText, type, status } = body;
-
-    let teacherId = (session?.user as any)?.id;
-    if (!teacherId) {
-      const fallbackTeacher = await prisma.user.findFirst({ where: { role: 'Teacher' } });
-      teacherId = fallbackTeacher?.id || 'demo-teacher-id';
-    }
 
     const generation = await prisma.contentGeneration.create({
       data: {

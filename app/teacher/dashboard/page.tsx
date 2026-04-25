@@ -13,22 +13,25 @@ export const dynamic = 'force-dynamic'
 export default async function TeacherDashboard() {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
-    redirect('/login')
+    redirect('/api/auth/signin')
   }
   const userId = (session.user as any).id
+  if ((session.user as any).role !== 'Teacher') {
+    redirect('/student/dashboard')
+  }
   
   let lessons: any[] = []
   let pendingGenerations: any[] = []
   
   try {
     lessons = await prisma.lesson.findMany({
-      where: { teacherId: userId === 'demo-teacher-id' ? undefined : userId },
+      where: { teacherId: userId },
       orderBy: { createdAt: 'desc' }
     })
     
     pendingGenerations = await prisma.contentGeneration.findMany({
       where: { 
-        teacherId: userId === 'demo-teacher-id' ? undefined : userId,
+        teacherId: userId,
         status: 'Pending'
       },
       orderBy: { createdAt: 'desc' }

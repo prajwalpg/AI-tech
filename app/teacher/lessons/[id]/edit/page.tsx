@@ -17,7 +17,7 @@ export default async function EditLessonPage({
   const session = await getServerSession(authOptions)
   
   if (!session?.user) {
-    redirect('/login')
+    redirect('/api/auth/signin')
   }
 
   const userRole = (session.user as any)?.role

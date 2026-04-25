@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic'
 export default async function StudentDashboard() {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
-    redirect('/login')
+    redirect('/api/auth/signin')
   }
   const userId = (session.user as any).id
 

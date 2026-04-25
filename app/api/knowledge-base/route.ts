@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-options';
 import { prisma } from '@/lib/prisma';
+import { requireAuth, requireTeacher } from '@/lib/auth-guards';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,9 +12,8 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    // Allow demo user to see the Knowledge Base too
-    // In a real production app, this would be restricted.
+    const user = await requireAuth(request).catch(() => null);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     
     const searchParams = request.nextUrl.searchParams;
     const subject = searchParams.get('subject');
@@ -34,15 +32,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    // For demo purposes, we allow the "Demo User" (which navigates via URL inferred roles)
-    // to update the knowledge base even if not strictly logged in via auth.
-    const isTeacher = (session?.user as any)?.role === 'Teacher' || !session?.user;
-    
-    if (!isTeacher) {
-      return NextResponse.json({ error: 'Teacher access required' }, { status: 401 });
-    }
+    const user = await requireTeacher(request).catch(() => null);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { title, subject, topic, content, type } = await request.json();
 
@@ -50,17 +41,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required curriculum data' }, { status: 400 });
     }
 
-    let teacherId = (session?.user as any)?.id;
-    
-    if (!teacherId) {
-      // Fallback for demo: find any teacher in the database
-      const fallbackTeacher = await prisma.user.findFirst({ where: { role: 'Teacher' } });
-      teacherId = fallbackTeacher?.id;
-      
-      if (!teacherId) {
-        throw new Error("No teacher user found in database to associate with this content.");
-      }
-    }
+    const teacherId = user.id;
 
     const entry = await prisma.knowledgeBase.create({
       data: {

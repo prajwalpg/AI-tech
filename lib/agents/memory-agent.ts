@@ -2,17 +2,26 @@ import { prisma } from '../prisma';
 
 export async function saveMemory(userId: string, data: any) {
   try {
-    // Basic implementation: storing as a serialized string inside a custom table
-    // or as doubt history based on schema.
-    await prisma.doubt.create({
-      data: {
-        studentId: userId,
-        question: `Memory Action: ${data.topic || 'General Learning'}`,
-        answer: 'Logged as memory event',
-        wasAnsweredByAI: true
-        // Here we just use Doubt as a vehicle since it exists for students
-      }
+    const valueStr = JSON.stringify(data);
+    
+    const existing = await prisma.memory.findFirst({
+      where: { userId, key: 'session' }
     });
+
+    if (existing) {
+      await prisma.memory.update({
+        where: { id: existing.id },
+        data: { value: valueStr }
+      });
+    } else {
+      await prisma.memory.create({
+        data: {
+          userId,
+          key: 'session',
+          value: valueStr
+        }
+      });
+    }
     return true;
   } catch (error) {
     console.error("Failed to save memory", error);
@@ -22,12 +31,16 @@ export async function saveMemory(userId: string, data: any) {
 
 export async function getMemory(userId: string) {
   try {
-    const memories = await prisma.doubt.findMany({
-      where: { studentId: userId },
-      orderBy: { createdAt: 'desc' },
-      take: 20
+    const memory = await prisma.memory.findFirst({
+      where: { userId, key: 'session' },
+      orderBy: { updatedAt: 'desc' }
     });
-    return memories.map(m => m.question).join('\n');
+    
+    if (memory && memory.value) {
+      const parsed = JSON.parse(memory.value);
+      return JSON.stringify(parsed);
+    }
+    return "";
   } catch (error) {
     return "";
   }

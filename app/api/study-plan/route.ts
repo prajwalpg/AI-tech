@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { runAnalyticsAgent } from '@/lib/agents/analytics-agent';
+import { requireAuth } from '@/lib/auth-guards';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
-
 export const dynamic = 'force-dynamic';
 
 /**
@@ -14,7 +14,9 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    const userId = (session?.user as any)?.id || 'cmn5q8mke0000mnu0jhpiq33m'; // Fallback to our tester student
+    if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    
+    const userId = (session.user as any).id;
 
     // 1. Get Student Analytics (Weakness detection via AI)
     const analytics = await runAnalyticsAgent(userId);
@@ -67,6 +69,11 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    const progresses = await prisma.progress.findMany({ where: { studentId: userId } });
+    const tasksCompleted = progresses.filter(p => p.status === 'Completed').length;
+    const totalTasks = progresses.length || 1;
+    const progressPercent = Math.round((tasksCompleted / totalTasks) * 100);
+
     return NextResponse.json({
       success: true,
       data: {
@@ -77,9 +84,9 @@ export async function GET(request: NextRequest) {
           action: "Start Lesson"
         },
         stats: {
-          tasksCompleted: 12, // Could be real data from assignments table
-          totalTasks: 16,
-          progressPercent: 75
+          tasksCompleted,
+          totalTasks: progresses.length ? progresses.length : 16, // Fallback to 16 just for demo if none
+          progressPercent
         },
         weakTopics: analytics.weakTopics,
         recommendations: analytics.recommendations,

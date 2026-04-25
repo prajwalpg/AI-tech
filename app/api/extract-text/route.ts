@@ -12,8 +12,20 @@ export async function POST(req: NextRequest) {
   try {
     const { filepath } = await req.json();
 
-    if (!filepath || !fs.existsSync(filepath)) {
-      return NextResponse.json({ error: 'File not found on server' }, { status: 400 });
+    if (!filepath) {
+      return NextResponse.json({ error: 'Filepath is required' }, { status: 400 });
+    }
+
+    let fileBuffer;
+    if (filepath.startsWith('http')) {
+      const response = await fetch(filepath);
+      if (!response.ok) throw new Error("Failed to fetch remote file for extraction");
+      fileBuffer = await response.arrayBuffer();
+    } else {
+      if (!fs.existsSync(filepath)) {
+        return NextResponse.json({ error: 'File not found locally' }, { status: 400 });
+      }
+      fileBuffer = fs.readFileSync(filepath);
     }
 
     const model = genAI.getGenerativeModel({ model: "gemini-flash-lite-latest" });
@@ -23,7 +35,7 @@ export async function POST(req: NextRequest) {
       "Extract and provide a comprehensive summary of all educational content in this textbook chapter. Organize it with clear headings and bullet points suitable for a teacher's knowledge base.",
       {
         inlineData: {
-          data: fs.readFileSync(filepath).toString("base64"),
+          data: Buffer.from(fileBuffer as ArrayBuffer).toString("base64"),
           mimeType: "application/pdf"
         }
       }

@@ -1,20 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth-options'
 import { prisma } from '@/lib/prisma'
+import { requireAuth, requireTeacher } from '@/lib/auth-guards'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const user = await requireAuth(request).catch(() => null);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const searchParams = request.nextUrl.searchParams
     const subject = searchParams.get('subject')
@@ -52,22 +45,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    const userRole = (session.user as any)?.role
-    if (userRole !== 'Teacher') {
-      return NextResponse.json(
-        { error: 'Only teachers can create lessons' },
-        { status: 403 }
-      )
-    }
+    const user = await requireTeacher(request).catch(() => null);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json()
     const { title, subject, description, content } = body
@@ -79,7 +58,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const userId = (session.user as any)?.id
+    const userId = user.id
 
     const lesson = await prisma.lesson.create({
       data: {

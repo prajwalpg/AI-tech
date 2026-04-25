@@ -17,3 +17,8 @@ out/
 *.pem
 .idea
 .vscode/
+probe-*.js
+test-*.js
+temp-*.ts
+*.tsbuildinfo
+/uploads/

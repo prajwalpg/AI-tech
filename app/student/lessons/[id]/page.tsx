@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { Navigation } from '@/components/navigation'
 import { ArrowLeft, BookOpen, User, MessageCircle } from 'lucide-react'
 import Link from 'next/link'
+import { MarkCompleteButton } from '@/components/mark-complete-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,7 +17,7 @@ export default async function LessonDetailPage({
   const session = await getServerSession(authOptions)
   
   if (!session?.user) {
-    redirect('/login')
+    redirect('/api/auth/signin')
   }
 
   const lesson = await prisma.lesson.findUnique({
@@ -111,6 +112,10 @@ export default async function LessonDetailPage({
                 Ask Questions
               </Link>
             </div>
+          </div>
+
+          <div className="mt-8 border-t border-gray-100 pt-6 flex justify-end">
+            <MarkCompleteButton lessonId={lesson.id} />
           </div>
         </div>
       </main>

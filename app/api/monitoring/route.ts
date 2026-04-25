@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-options';
+import { requireTeacher } from '@/lib/auth-guards';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,8 +10,8 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    // Relaxed for demo user
+    const user = await requireTeacher(request).catch(() => null);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     
     // 1. Fetch recent AI doubts
     const doubts = await prisma.doubt.findMany({

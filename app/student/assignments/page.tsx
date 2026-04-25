@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic'
 export default async function AssignmentsPage() {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
-    redirect('/login')
+    redirect('/api/auth/signin')
   }
 
   const assignments = await prisma.contentGeneration.findMany({
